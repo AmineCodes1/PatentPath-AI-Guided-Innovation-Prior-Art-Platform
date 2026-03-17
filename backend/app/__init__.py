@@ -1,0 +1,1 @@
+"""PatentPath backend application package."""

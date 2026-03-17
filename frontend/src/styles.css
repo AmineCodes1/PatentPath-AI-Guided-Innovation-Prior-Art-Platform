@@ -1,0 +1,16 @@
+/**
+ * Global styles for the initial PatentPath frontend scaffold.
+ */
+:root {
+  color: #1A1A2E;
+  background-color: #FFFFFF;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  padding: 2rem;
+}
