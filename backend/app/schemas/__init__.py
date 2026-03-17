@@ -5,7 +5,7 @@ from app.schemas.gap_analysis import GapAnalysisRead, GapAnalysisSummary
 from app.schemas.innovation_project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.schemas.patent_record import PatentRecordRead, PatentRecordSummary
 from app.schemas.report import ReportRequest, ReportStatusRead
-from app.schemas.scored_result import ScoredResultRead, SearchResultsResponse
+from app.schemas.scored_result import ScoredResultCreate, ScoredResultRead, SearchResultsResponse
 from app.schemas.search_session import SearchRequest, SearchSessionRead
 from app.schemas.user import Token, TokenData, UserCreate, UserLogin, UserRead
 
@@ -25,6 +25,7 @@ __all__ = [
     "PatentRecordRead",
     "PatentRecordSummary",
     "ScoredResultRead",
+    "ScoredResultCreate",
     "SearchResultsResponse",
     "GapAnalysisRead",
     "GapAnalysisSummary",

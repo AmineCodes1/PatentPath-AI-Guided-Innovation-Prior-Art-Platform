@@ -25,6 +25,20 @@ class ScoredResultRead(BaseModel):
     rank: int
 
 
+class ScoredResultCreate(BaseModel):
+    """Internal payload schema used before persisting scored results."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    patent_id: UUID
+    bm25_score: float
+    tfidf_cosine: float
+    semantic_cosine: float
+    composite_score: float
+    risk_label: RiskLabel
+    rank: int
+
+
 class SearchResultsResponse(BaseModel):
     """Paginated results payload returned by search result endpoints."""
 
