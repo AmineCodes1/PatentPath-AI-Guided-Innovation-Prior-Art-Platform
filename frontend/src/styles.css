@@ -1,16 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /**
- * Global styles for the initial PatentPath frontend scaffold.
+ * Global theme and base typography for PatentPath frontend.
  */
-:root {
-  color: #1A1A2E;
-  background-color: #FFFFFF;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-}
-
-.app-shell {
-  padding: 2rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%);
+  color: #1a1a2e;
+  font-family: "Manrope", "Segoe UI", sans-serif;
 }
