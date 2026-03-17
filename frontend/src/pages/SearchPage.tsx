@@ -8,6 +8,9 @@ import type { ReactElement } from "react";
 import TopNav from "../components/layout/TopNav";
 import FilterSidebar from "../components/search/FilterSidebar";
 import PatentResultCard from "../components/search/PatentResultCard";
+import GapAnalysisPanel from "../components/analysis/GapAnalysisPanel";
+import FeasibilityWidget from "../components/analysis/FeasibilityWidget";
+import PatentDetailPanel from "../components/analysis/PatentDetailPanel";
 import apiClient from "../api/client";
 import type {
   ExecuteSearchResponse,
@@ -18,6 +21,7 @@ import type {
   SearchResultsResponse,
 } from "../types/search";
 import { useProjectStore } from "../store/projectStore";
+import { useAnalysisStore } from "../store/analysisStore";
 
 type ResultFilters = {
   risk: RiskLabel | "ALL";
@@ -62,12 +66,21 @@ export default function SearchPage(): ReactElement {
   const [isExecuting, setIsExecuting] = useState(false);
   const [results, setResults] = useState<ScoredResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<ScoredResult | null>(null);
+  const [searchSessionId, setSearchSessionId] = useState<string>(sessionId ?? "");
   const [resultFilters, setResultFilters] = useState<ResultFilters>({
     risk: "ALL",
     country: "",
     dateFrom: "",
     dateTo: "",
   });
+
+  const analysisStatus = useAnalysisStore((state) => state.status);
+  const analysisError = useAnalysisStore((state) => state.error);
+  const analysisSessionId = useAnalysisStore((state) => state.sessionId);
+  const gapAnalysis = useAnalysisStore((state) => state.gapAnalysis);
+  const feasibility = useAnalysisStore((state) => state.feasibility);
+  const runGapAnalysisForSession = useAnalysisStore((state) => state.runGapAnalysisForSession);
+  const resetAnalysis = useAnalysisStore((state) => state.resetAnalysis);
 
   useEffect(() => {
     void fetchProjects();
@@ -82,6 +95,27 @@ export default function SearchPage(): ReactElement {
       }
     }
   }, [activeProjectId, projects, setCurrentProject]);
+
+  useEffect(() => {
+    if (sessionId) {
+      setSearchSessionId(sessionId);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (step !== 4 || !searchSessionId) {
+      return;
+    }
+
+    if (
+      analysisSessionId === searchSessionId
+      && (analysisStatus === "processing" || analysisStatus === "complete")
+    ) {
+      return;
+    }
+
+    void runGapAnalysisForSession(searchSessionId);
+  }, [analysisSessionId, analysisStatus, runGapAnalysisForSession, searchSessionId, step]);
 
   const canPreview = queryText.trim().length >= 100;
 
@@ -136,6 +170,8 @@ export default function SearchPage(): ReactElement {
       return;
     }
 
+    resetAnalysis();
+    setSearchSessionId("");
     setIsExecuting(true);
     setStep(3);
     simulateLoadingPhases();
@@ -153,14 +189,23 @@ export default function SearchPage(): ReactElement {
         executePayload,
       );
       const targetSessionId = executeResponse.data.session_id || sessionId;
+      if (!targetSessionId) {
+        throw new Error("No session id returned from search execution.");
+      }
+
+      setSearchSessionId(targetSessionId);
       const resultsResponse = await apiClient.get<SearchResultsResponse>(
         `/search/session/${targetSessionId}/results`,
       );
 
-      setResults(resultsResponse.data.results.sort((a, b) => b.composite_score - a.composite_score));
-      setSelectedResult(resultsResponse.data.results[0] ?? null);
+      const sortedResults = [...resultsResponse.data.results].sort((a, b) => b.composite_score - a.composite_score);
+      setResults(sortedResults);
+      setSelectedResult(sortedResults[0] ?? null);
+      setStep(4);
     } catch {
       setResults([]);
+      setSelectedResult(null);
+      setSearchSessionId("");
     } finally {
       setIsExecuting(false);
     }
@@ -401,31 +446,26 @@ export default function SearchPage(): ReactElement {
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
             <h2 className="text-lg font-semibold text-text-primary">Step 4 — Gap Analysis</h2>
-            <p className="mt-2 rounded-lg bg-accent/10 p-3 text-sm text-primary">
-              GapAnalysisPanel placeholder: detailed AI novelty gap analysis will be mounted here in Task 4.
+            <p className="mt-3 rounded-lg border border-risk-medium/40 bg-risk-medium/10 p-3 text-sm text-text-primary">
+              ⚠ This is a computational heuristic, not legal advice. Consult a patent attorney before filing.
             </p>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <FeasibilityWidget
+                feasibility={feasibility}
+                isLoading={analysisStatus === "triggering" || analysisStatus === "processing"}
+              />
+              <GapAnalysisPanel
+                analysis={gapAnalysis}
+                isLoading={analysisStatus === "triggering" || analysisStatus === "processing"}
+                error={analysisError}
+              />
+            </div>
           </article>
         </section>
 
         <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-primary">Patent Detail</h2>
-          {selectedResult ? (
-            <div className="mt-3 space-y-2 text-sm">
-              <p className="font-semibold text-text-primary">{selectedResult.patent.title}</p>
-              <p className="text-text-secondary">{selectedResult.patent.publication_number}</p>
-              <p className="text-text-secondary">{selectedResult.patent.abstract}</p>
-              <a
-                href={selectedResult.patent.espacenet_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
-              >
-                Open in Espacenet
-              </a>
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-text-secondary">Select a result to preview details.</p>
-          )}
+          <PatentDetailPanel selectedResult={selectedResult} />
         </aside>
       </main>
     </div>
