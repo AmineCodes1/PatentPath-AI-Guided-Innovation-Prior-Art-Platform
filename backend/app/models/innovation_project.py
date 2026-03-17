@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.project_note import ProjectNote
     from app.models.search_session import SearchSession
     from app.models.user import User
 
@@ -49,6 +50,11 @@ class InnovationProject(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     owner: Mapped[User] = relationship("User", back_populates="projects")
     search_sessions: Mapped[list[SearchSession]] = relationship(
         "SearchSession",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    notes: Mapped[list[ProjectNote]] = relationship(
+        "ProjectNote",
         back_populates="project",
         cascade="all, delete-orphan",
     )
