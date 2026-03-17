@@ -3,8 +3,9 @@
  */
 
 import TopNav from "../components/layout/TopNav";
+import type { ReactElement } from "react";
 
-export default function DashboardPage(): JSX.Element {
+export default function DashboardPage(): ReactElement {
   return (
     <div className="min-h-screen bg-surface">
       <TopNav />

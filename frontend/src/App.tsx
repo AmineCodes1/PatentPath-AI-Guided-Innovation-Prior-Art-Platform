@@ -3,6 +3,7 @@
  */
 
 import { Navigate, Route, Routes } from "react-router-dom";
+import type { ReactElement } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
@@ -10,7 +11,7 @@ import ProjectPage from "./pages/ProjectPage";
 import RegisterPage from "./pages/RegisterPage";
 import SearchPage from "./pages/SearchPage";
 
-export default function App(): JSX.Element {
+export default function App(): ReactElement {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

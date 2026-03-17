@@ -3,11 +3,12 @@
  */
 
 import { FormEvent, useState } from "react";
+import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getMe, login, register } from "../api/auth";
 import { useAuthStore } from "../store/authStore";
 
-export default function RegisterPage(): JSX.Element {
+export default function RegisterPage(): ReactElement {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -3,13 +3,14 @@
  */
 
 import { Navigate } from "react-router-dom";
+import type { ReactElement } from "react";
 import { useAuthStore } from "../store/authStore";
 
 type ProtectedRouteProps = {
-  children: JSX.Element;
+  children: ReactElement;
 };
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps): JSX.Element {
+export default function ProtectedRoute({ children }: ProtectedRouteProps): ReactElement {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   if (!isAuthenticated) {

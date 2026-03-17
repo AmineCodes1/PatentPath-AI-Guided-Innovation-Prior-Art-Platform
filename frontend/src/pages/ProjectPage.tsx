@@ -3,9 +3,10 @@
  */
 
 import { useParams } from "react-router-dom";
+import type { ReactElement } from "react";
 import TopNav from "../components/layout/TopNav";
 
-export default function ProjectPage(): JSX.Element {
+export default function ProjectPage(): ReactElement {
   const { id } = useParams<{ id: string }>();
 
   return (

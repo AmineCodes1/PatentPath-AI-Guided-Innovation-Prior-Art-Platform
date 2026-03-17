@@ -3,9 +3,10 @@
  */
 
 import { useParams } from "react-router-dom";
+import type { ReactElement } from "react";
 import TopNav from "../components/layout/TopNav";
 
-export default function SearchPage(): JSX.Element {
+export default function SearchPage(): ReactElement {
   const { sessionId } = useParams<{ sessionId: string }>();
 
   return (

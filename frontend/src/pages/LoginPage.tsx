@@ -3,11 +3,12 @@
  */
 
 import { FormEvent, useState } from "react";
+import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getMe, login } from "../api/auth";
 import { useAuthStore } from "../store/authStore";
 
-export default function LoginPage(): JSX.Element {
+export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

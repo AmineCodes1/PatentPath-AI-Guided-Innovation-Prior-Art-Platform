@@ -3,10 +3,11 @@
  */
 
 import { useMemo, useState } from "react";
+import type { ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
-export default function TopNav(): JSX.Element {
+export default function TopNav(): ReactElement {
   const [open, setOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
