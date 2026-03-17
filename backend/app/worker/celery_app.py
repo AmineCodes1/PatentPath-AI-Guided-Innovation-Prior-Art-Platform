@@ -10,7 +10,7 @@ celery_app = Celery(
     "patentpath",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.search_task"],
+    include=["app.tasks.search_task", "app.tasks.analysis_task"],
 )
 
 celery_app.autodiscover_tasks(["app.tasks"])

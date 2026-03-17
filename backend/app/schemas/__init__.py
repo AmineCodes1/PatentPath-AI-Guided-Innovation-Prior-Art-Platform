@@ -1,7 +1,7 @@
 """Exports for all Pydantic schemas used by PatentPath APIs."""
 
 from app.schemas.filters import DateRangeFilter, SearchFilters
-from app.schemas.gap_analysis import GapAnalysisRead, GapAnalysisSummary
+from app.schemas.gap_analysis import GapAnalysisCreate, GapAnalysisRead, GapAnalysisSummary
 from app.schemas.innovation_project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.schemas.patent_record import PatentRecordRead, PatentRecordSummary
 from app.schemas.report import ReportRequest, ReportStatusRead
@@ -28,6 +28,7 @@ __all__ = [
     "ScoredResultCreate",
     "SearchResultsResponse",
     "GapAnalysisRead",
+    "GapAnalysisCreate",
     "GapAnalysisSummary",
     "ReportRequest",
     "ReportStatusRead",

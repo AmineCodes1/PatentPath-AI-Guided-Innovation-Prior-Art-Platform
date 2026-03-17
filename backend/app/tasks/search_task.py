@@ -80,6 +80,9 @@ async def _run_patent_search_async(session_id: str) -> dict[str, object]:
         session.status = SearchSessionStatus.COMPLETE
         await db.commit()
 
+        # Automatically trigger AI gap analysis after search scoring completes.
+        celery_app.send_task("run_gap_analysis_task", args=[str(session.id)])
+
         return {
             "session_id": session_id,
             "status": SearchSessionStatus.COMPLETE.value,

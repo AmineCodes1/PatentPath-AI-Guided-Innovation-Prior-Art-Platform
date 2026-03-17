@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import auth, health, patents, projects, reports, search
+from app.api.v1 import analysis, auth, health, patents, projects, reports, search
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
 from app.core.redis_client import close_redis, ping_redis
@@ -39,6 +39,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix=API_V1_PREFIX)
 app.include_router(projects.router, prefix=API_V1_PREFIX)
 app.include_router(search.router, prefix=API_V1_PREFIX)
+app.include_router(analysis.router, prefix=API_V1_PREFIX)
 app.include_router(patents.router, prefix=API_V1_PREFIX)
 app.include_router(reports.router, prefix=API_V1_PREFIX)
 app.include_router(health.router, prefix=API_V1_PREFIX)
