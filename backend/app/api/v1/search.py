@@ -2,23 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.models.gap_analysis import GapAnalysis
 from app.models.innovation_project import InnovationProject
-from app.models.scored_result import RiskLabel, ScoredResult
+from app.models.scored_result import RiskLabel
 from app.models.search_session import SearchSession, SearchSessionStatus
 from app.schemas.filters import SearchFilters
-from app.schemas.gap_analysis import GapAnalysisSummary
-from app.schemas.scored_result import ScoredResultRead, SearchResultsResponse
+from app.schemas.scored_result import SearchResultsResponse
 from app.schemas.search_session import SearchSessionRead
 from app.services.query_builder import (
 	LAST_BUILD_METADATA,
@@ -27,6 +26,7 @@ from app.services.query_builder import (
 	suggest_ipc_classes,
 	validate_cql,
 )
+from app.services.search_service import get_search_stats, get_session_results as get_session_results_service
 from app.worker.celery_app import celery_app
 
 router = APIRouter(prefix="/search", tags=["search"])
@@ -90,30 +90,31 @@ class ExecuteSearchResponse(BaseModel):
 	estimated_seconds: int
 
 
-def _to_scored_result_read(result: ScoredResult) -> ScoredResultRead:
-	return ScoredResultRead.model_validate(
-		{
-			"patent": result.patent,
-			"bm25_score": result.bm25_score,
-			"tfidf_cosine": result.tfidf_cosine,
-			"semantic_cosine": result.semantic_cosine,
-			"composite_score": result.composite_score,
-			"risk_label": result.risk_label,
-			"rank": result.rank,
-		}
-	)
+class SavePatentRequest(BaseModel):
+	"""Request payload for bookmarking a patent within a search session context."""
+
+	model_config = ConfigDict(from_attributes=True)
+
+	publication_number: str = Field(min_length=3)
+	notes: str | None = Field(default=None, max_length=2000)
 
 
-def _to_gap_summary(gap: GapAnalysis | None) -> GapAnalysisSummary | None:
-	if gap is None:
-		return None
-	return GapAnalysisSummary.model_validate(gap)
+def _resolve_user_id_from_token(token: str) -> UUID:
+	"""Temporary user resolution until full JWT auth dependency is wired."""
+	try:
+		return UUID(token.strip())
+	except Exception as exc:
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Invalid authentication token format",
+			headers={"WWW-Authenticate": "Bearer"},
+		) from exc
 
 
-@router.post("/preview-query", response_model=PreviewQueryResponse)
+@router.post("/preview-query")
 async def preview_query(
 	payload: PreviewQueryRequest,
-	_: str = Depends(require_auth_token),
+	_: Annotated[str, Depends(require_auth_token)],
 ) -> PreviewQueryResponse:
 	"""Generate and validate a CQL preview before executing a full OPS search."""
 	filters = payload.filters or SearchFilters()
@@ -132,11 +133,11 @@ async def preview_query(
 	)
 
 
-@router.post("/execute", response_model=ExecuteSearchResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/execute", status_code=status.HTTP_202_ACCEPTED)
 async def execute_search(
 	payload: ExecuteSearchRequest,
-	db: AsyncSession = Depends(get_db),
-	_: str = Depends(require_auth_token),
+	db: Annotated[AsyncSession, Depends(get_db)],
+	_: Annotated[str, Depends(require_auth_token)],
 ) -> ExecuteSearchResponse:
 	"""Create a pending search session and dispatch async processing through Celery."""
 	project = await db.scalar(
@@ -174,11 +175,11 @@ async def execute_search(
 	)
 
 
-@router.get("/session/{session_id}", response_model=SearchSessionRead)
+@router.get("/session/{session_id}")
 async def get_session(
 	session_id: UUID,
-	db: AsyncSession = Depends(get_db),
-	_: str = Depends(require_auth_token),
+	db: Annotated[AsyncSession, Depends(get_db)],
+	_: Annotated[str, Depends(require_auth_token)],
 ) -> SearchSessionRead:
 	"""Return a search session by ID."""
 	session = await db.scalar(select(SearchSession).where(SearchSession.id == session_id))
@@ -187,44 +188,75 @@ async def get_session(
 	return SearchSessionRead.model_validate(session)
 
 
-@router.get("/session/{session_id}/results", response_model=SearchResultsResponse)
+@router.get("/session/{session_id}/results")
 async def get_session_results(
 	session_id: UUID,
-	page: int = Query(default=1, ge=1),
-	per_page: int = Query(default=20, ge=1, le=50),
-	risk_filter: list[RiskLabel] | None = Query(default=None),
-	db: AsyncSession = Depends(get_db),
-	_: str = Depends(require_auth_token),
+	page: Annotated[int, Query(default=1, ge=1)],
+	per_page: Annotated[int, Query(default=20, ge=1, le=50)],
+	risk_filter: Annotated[list[RiskLabel] | None, Query(default=None)],
+	db: Annotated[AsyncSession, Depends(get_db)],
+	token: Annotated[str, Depends(require_auth_token)],
 ) -> SearchResultsResponse:
 	"""Return paginated scored results for a completed or in-progress search session."""
-	session = await db.scalar(select(SearchSession).where(SearchSession.id == session_id))
+	user_id = _resolve_user_id_from_token(token)
+	return await get_session_results_service(
+		db=db,
+		session_id=session_id,
+		user_id=user_id,
+		page=page,
+		per_page=per_page,
+		risk_filter=risk_filter,
+	)
+
+
+@router.post("/session/{session_id}/save-patent")
+async def save_patent_to_project(
+	session_id: UUID,
+	payload: SavePatentRequest,
+	db: Annotated[AsyncSession, Depends(get_db)],
+	token: Annotated[str, Depends(require_auth_token)],
+) -> dict[str, object]:
+	"""Persist a user-selected patent reference for later project-level review."""
+	user_id = _resolve_user_id_from_token(token)
+	session = await db.scalar(
+		select(SearchSession)
+		.join(InnovationProject, InnovationProject.id == SearchSession.project_id)
+		.where(SearchSession.id == session_id, InnovationProject.user_id == user_id)
+	)
 	if session is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Search session not found")
 
-	filters = [ScoredResult.session_id == session_id]
-	if risk_filter:
-		filters.append(ScoredResult.risk_label.in_(risk_filter))
+	saved_patents = list((session.filters_json or {}).get("saved_patents", []))
+	publication_number = payload.publication_number.strip().upper()
 
-	total_count = await db.scalar(select(func.count()).select_from(ScoredResult).where(*filters))
-	total_count = int(total_count or 0)
+	if not any(item.get("publication_number") == publication_number for item in saved_patents if isinstance(item, dict)):
+		saved_patents.append(
+			{
+				"publication_number": publication_number,
+				"notes": payload.notes,
+				"saved_at": datetime.now(timezone.utc).isoformat(),
+			}
+		)
 
-	query = (
-		select(ScoredResult)
-		.where(*filters)
-		.options(selectinload(ScoredResult.patent))
-		.order_by(ScoredResult.rank.asc())
-		.offset((page - 1) * per_page)
-		.limit(per_page)
-	)
-	results = list((await db.scalars(query)).all())
+	updated_filters = dict(session.filters_json or {})
+	updated_filters["saved_patents"] = saved_patents
+	session.filters_json = updated_filters
+	await db.commit()
 
-	gap_analysis = await db.scalar(
-		select(GapAnalysis).where(GapAnalysis.session_id == session_id)
-	)
+	return {
+		"session_id": session_id,
+		"project_id": session.project_id,
+		"saved_patent": publication_number,
+		"saved_count": len(saved_patents),
+	}
 
-	return SearchResultsResponse(
-		session_id=session_id,
-		total_count=total_count,
-		results=[_to_scored_result_read(result) for result in results],
-		gap_analysis=_to_gap_summary(gap_analysis),
-	)
+
+@router.get("/session/{session_id}/stats")
+async def get_session_stats(
+	session_id: UUID,
+	db: Annotated[AsyncSession, Depends(get_db)],
+	token: Annotated[str, Depends(require_auth_token)],
+) -> dict[str, object]:
+	"""Return aggregated metrics for the search results dashboard widget."""
+	user_id = _resolve_user_id_from_token(token)
+	return await get_search_stats(db=db, session_id=session_id, user_id=user_id)
