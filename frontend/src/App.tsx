@@ -6,6 +6,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import type { ReactElement } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import DashboardPage from "./pages/DashboardPage";
+import DocsPage from "./pages/DocsPage";
 import LoginPage from "./pages/LoginPage";
 import ProjectPage from "./pages/ProjectPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -38,6 +39,14 @@ export default function App(): ReactElement {
         element={
           <ProtectedRoute>
             <SearchPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/app-docs"
+        element={
+          <ProtectedRoute>
+            <DocsPage />
           </ProtectedRoute>
         }
       />

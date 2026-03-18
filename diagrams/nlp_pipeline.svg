@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="780" viewBox="0 0 1800 780" role="img" aria-labelledby="title desc">
+  <title id="title">PatentPath NLP Scoring Pipeline</title>
+  <desc id="desc">Pipeline showing preprocessing, three parallel scoring tracks, and composite risk labeling.</desc>
+  <defs>
+    <style>
+      .text { fill: #1A1A2E; font-family: Arial, Helvetica, sans-serif; }
+      .title { font-size: 30px; font-weight: 700; }
+      .label { font-size: 14px; font-weight: 600; }
+      .small { font-size: 12px; font-weight: 500; }
+      .box { fill: #eef3ff; stroke: #003399; stroke-width: 2; rx: 12; ry: 12; }
+      .lane { stroke-width: 2; fill-opacity: 0.18; }
+      .bm25 { fill: #d8ecff; stroke: #0070c0; }
+      .tfidf { fill: #ffe4cc; stroke: #ed7d31; }
+      .semantic { fill: #dff2dd; stroke: #548235; }
+      .mix { fill: #f8f4ff; stroke: #5b4da3; }
+      .arrow { stroke: #003399; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#003399" />
+    </marker>
+  </defs>
+
+  <text x="60" y="60" class="text title">NLP Similarity Scoring Pipeline</text>
+
+  <rect x="60" y="110" width="290" height="90" class="box" />
+  <text x="205" y="145" class="text label" text-anchor="middle">INPUT</text>
+  <text x="205" y="170" class="text small" text-anchor="middle">User idea + Patent corpus</text>
+
+  <rect x="430" y="110" width="430" height="90" class="box" />
+  <text x="645" y="145" class="text label" text-anchor="middle">Preprocessing</text>
+  <text x="645" y="170" class="text small" text-anchor="middle">spaCy lemmatization, stopwords removal, noun chunks</text>
+
+  <path d="M350 155 L430 155" class="arrow" />
+
+  <rect x="110" y="260" width="520" height="140" class="lane bm25" />
+  <text x="140" y="290" class="text label">BM25 Track (30%)</text>
+  <rect x="150" y="305" width="430" height="72" class="box" />
+  <text x="365" y="334" class="text small" text-anchor="middle">rank_bm25.BM25Okapi scoring</text>
+  <text x="365" y="356" class="text small" text-anchor="middle">min-max normalization to [0,1]</text>
+
+  <rect x="670" y="260" width="520" height="140" class="lane tfidf" />
+  <text x="700" y="290" class="text label">TF-IDF Track (50%)</text>
+  <rect x="710" y="305" width="430" height="72" class="box" />
+  <text x="925" y="334" class="text small" text-anchor="middle">sklearn TfidfVectorizer over claims</text>
+  <text x="925" y="356" class="text small" text-anchor="middle">cosine similarity against query vector</text>
+
+  <rect x="1230" y="260" width="520" height="140" class="lane semantic" />
+  <text x="1260" y="290" class="text label">Semantic Track (20%)</text>
+  <rect x="1270" y="305" width="430" height="72" class="box" />
+  <text x="1485" y="334" class="text small" text-anchor="middle">MiniLM sentence embeddings</text>
+  <text x="1485" y="356" class="text small" text-anchor="middle">vector cosine similarity</text>
+
+  <path d="M645 200 L365 260" class="arrow" />
+  <path d="M645 200 L925 260" class="arrow" />
+  <path d="M645 200 L1485 260" class="arrow" />
+
+  <rect x="590" y="470" width="620" height="90" class="lane mix" />
+  <text x="900" y="505" class="text label" text-anchor="middle">COMPOSITE SCORE</text>
+  <text x="900" y="530" class="text small" text-anchor="middle">SS = 0.30 × BM25 + 0.50 × TF-IDF + 0.20 × Semantic</text>
+
+  <path d="M365 400 L365 450 L720 450 L720 470" class="arrow" />
+  <path d="M925 400 L925 470" class="arrow" />
+  <path d="M1485 400 L1485 450 L1080 450 L1080 470" class="arrow" />
+
+  <rect x="640" y="610" width="250" height="84" class="box" />
+  <text x="765" y="645" class="text label" text-anchor="middle">Risk Label Assignment</text>
+  <text x="765" y="668" class="text small" text-anchor="middle">HIGH / MEDIUM / LOW / MINIMAL</text>
+
+  <rect x="960" y="610" width="250" height="84" class="box" />
+  <text x="1085" y="645" class="text label" text-anchor="middle">OUTPUT</text>
+  <text x="1085" y="668" class="text small" text-anchor="middle">Ranked prior-art list</text>
+
+  <path d="M900 560 L900 610" class="arrow" />
+  <path d="M890 652 L960 652" class="arrow" />
+</svg>

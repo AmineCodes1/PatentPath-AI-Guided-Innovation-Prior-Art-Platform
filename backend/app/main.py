@@ -7,10 +7,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import analysis, auth, health, patents, projects, reports, search
+from app.api.v1 import analysis, auth, classifications, health, patents, projects, reports, search
 from app.core.config import get_settings
 from app.core.database import close_db, init_db
+from app.core.exceptions import PatentPathBaseError
+from app.core.logging_config import configure_logging
 from app.core.redis_client import close_redis, ping_redis
+
+configure_logging()
 
 settings = get_settings()
 API_V1_PREFIX = "/api/v1"
@@ -39,10 +43,27 @@ app.add_middleware(
 app.include_router(auth.router, prefix=API_V1_PREFIX)
 app.include_router(projects.router, prefix=API_V1_PREFIX)
 app.include_router(search.router, prefix=API_V1_PREFIX)
+app.include_router(classifications.router, prefix=API_V1_PREFIX)
 app.include_router(analysis.router, prefix=API_V1_PREFIX)
 app.include_router(patents.router, prefix=API_V1_PREFIX)
 app.include_router(reports.router, prefix=API_V1_PREFIX)
 app.include_router(health.router, prefix=API_V1_PREFIX)
+
+
+@app.exception_handler(PatentPathBaseError)
+async def patentpath_exception_handler(_: Request, exc: PatentPathBaseError) -> JSONResponse:
+    """Return structured domain errors for client-side handling."""
+    payload: dict[str, object] = {
+        "error_code": exc.error_code,
+        "message": exc.message,
+    }
+    headers: dict[str, str] = {}
+
+    if exc.retry_after_seconds is not None:
+        payload["retry_after_seconds"] = exc.retry_after_seconds
+        headers["Retry-After"] = str(exc.retry_after_seconds)
+
+    return JSONResponse(status_code=exc.status_code, content=payload, headers=headers or None)
 
 
 @app.exception_handler(HTTPException)

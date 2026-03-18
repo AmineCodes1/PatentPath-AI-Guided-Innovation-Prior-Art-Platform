@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Patent Preparation Report</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 22mm 16mm 20mm 16mm;
+        @bottom-right {
+          content: "Page " counter(page) " / " counter(pages);
+          color: #595959;
+          font-size: 10px;
+        }
+      }
+
+      :root {
+        --primary: #003399;
+        --accent: #5580c8;
+        --surface: #f5f7fa;
+        --text-primary: #1a1a2e;
+        --text-secondary: #595959;
+        --risk-high: #c00000;
+        --risk-medium: #ed7d31;
+        --risk-low: #548235;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text-primary);
+        font-family: "Segoe UI", Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .header {
+        border: 1px solid #dbe3ef;
+        background: var(--surface);
+        padding: 14px;
+        border-radius: 8px;
+      }
+
+      .logo-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--primary);
+        color: #ffffff;
+        font-weight: 700;
+        text-align: center;
+        line-height: 28px;
+      }
+
+      .meta {
+        color: var(--text-secondary);
+        font-size: 11px;
+      }
+
+      .confidential {
+        margin-top: 8px;
+        color: var(--text-secondary);
+        font-size: 11px;
+      }
+
+      .section {
+        margin-top: 14px;
+        border: 1px solid #dde5ef;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .section + .section.page-break {
+        page-break-before: always;
+      }
+
+      .section-title {
+        background: var(--primary);
+        color: #ffffff;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .section-body {
+        padding: 10px;
+      }
+
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 10px;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .risk-HIGH {
+        background: var(--risk-high);
+      }
+
+      .risk-MEDIUM {
+        background: var(--risk-medium);
+      }
+
+      .risk-LOW {
+        background: var(--risk-low);
+      }
+
+      .mono-box {
+        margin-top: 8px;
+        border: 1px dashed #95a8c8;
+        background: #f9fbff;
+        border-radius: 6px;
+        padding: 8px;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 11px;
+        word-break: break-word;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid #dbe3ef;
+        padding: 6px;
+        vertical-align: top;
+      }
+
+      th {
+        background: #eef3fb;
+        color: var(--text-primary);
+        text-align: left;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0 0 18px;
+        padding: 0;
+      }
+
+      .paragraph + .paragraph {
+        margin-top: 8px;
+      }
+
+      .muted {
+        color: var(--text-secondary);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .watermark {
+        margin-top: 16px;
+        text-align: center;
+        color: #8d97a8;
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo-row">
+        <div class="logo">
+          <span class="logo-mark">P</span>
+          <div>
+            <h1>PatentPath</h1>
+            <p class="muted">Patent Preparation Report</p>
+          </div>
+        </div>
+        <p class="meta">Generated: {{ report_generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+      </div>
+      <p class="confidential">Confidentiality Notice: This document is intended for internal innovation review and preparation support.</p>
+    </header>
+
+    <section class="section">
+      <div class="section-title">Section 1 — Invention Title &amp; Field</div>
+      <div class="section-body">
+        <p><strong>{{ project.title }}</strong></p>
+        <p class="muted">IPC Domain: {{ project.domain_ipc_class or 'Not specified' }}</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 2 — Problem Statement</div>
+      <div class="section-body">
+        <p class="paragraph">{{ project.problem_statement }}</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 3 — Prior Art Search Summary</div>
+      <div class="section-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Publication Number</th>
+              <th>Title</th>
+              <th>Date</th>
+              <th>Applicant</th>
+              <th>Similarity Score</th>
+              <th>Risk Label</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scored, patent in top_5_results %}
+            <tr>
+              <td>{{ patent.publication_number }}</td>
+              <td>{{ patent.title }}</td>
+              <td>{{ patent.publication_date }}</td>
+              <td>{{ patent.applicants | join(', ') if patent.applicants else 'N/A' }}</td>
+              <td>{{ '%.3f' | format(scored.composite_score) }}</td>
+              <td>{{ scored.risk_label.value }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="mono-box">{{ session.cql_generated }}</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 4 — Technology Gap Analysis</div>
+      <div class="section-body">
+        <p>
+          <span class="badge risk-{{ gap_analysis.overall_risk.value }}">Overall Risk: {{ gap_analysis.overall_risk.value }}</span>
+        </p>
+        {% for paragraph in narrative_paragraphs %}
+        <p class="paragraph">{{ paragraph }}</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="section page-break">
+      <div class="section-title">Section 5 — Proposed Invention Description</div>
+      <div class="section-body">
+        <p class="paragraph">{{ project.problem_statement }}</p>
+        {% if project_notes %}
+        <h3 style="margin-top:10px;">Project Notes</h3>
+        <ul>
+          {% for note in project_notes %}
+          <li><strong>{{ note.title }}:</strong> {{ note.content }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 6 — Distinguishing Features</div>
+      <div class="section-body">
+        <ul>
+          {% for item in gap_analysis.gap_aspects %}
+          <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 7 — Draft Claims Outline</div>
+      <div class="section-body">
+        <ul>
+          {% for suggestion in gap_analysis.suggestions %}
+          <li>A system/method comprising {{ suggestion | lower }}.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 8 — Feasibility Assessment</div>
+      <div class="section-body two-col">
+        <table>
+          <tbody>
+            <tr><th>Technical Readiness</th><td>{{ gap_analysis.feasibility_technical if gap_analysis.feasibility_technical is not none else 'N/A' }}</td></tr>
+            <tr><th>Domain Specificity</th><td>{{ gap_analysis.feasibility_domain if gap_analysis.feasibility_domain is not none else 'N/A' }}</td></tr>
+            <tr><th>Claim Potential</th><td>{{ gap_analysis.feasibility_claim if gap_analysis.feasibility_claim is not none else 'N/A' }}</td></tr>
+            <tr><th>Composite</th><td>{{ feasibility_composite }}%</td></tr>
+          </tbody>
+        </table>
+        <p class="paragraph">{{ gap_analysis.narrative_text[:600] }}</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Section 9 — Recommended Next Steps</div>
+      <div class="section-body">
+        <ol>
+          <li>Consult patent attorney.</li>
+          <li>File provisional application.</li>
+          <li>Conduct FTO analysis.</li>
+          <li>Consider PCT application.</li>
+          <li>Document reduction to practice.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section page-break">
+      <div class="section-title">Section 10 — Appendix</div>
+      <div class="section-body">
+        <table>
+          <thead>
+            <tr>
+              <th>Publication Number</th>
+              <th>Title</th>
+              <th>Espacenet URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for patent in all_analyzed_patents %}
+            <tr>
+              <td>{{ patent.publication_number }}</td>
+              <td>{{ patent.title }}</td>
+              <td>{{ patent.espacenet_url }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="watermark">⚠ This report is a computational tool, not legal advice. It does not constitute a patentability opinion. Always consult a qualified patent attorney or patent agent before filing any patent application.</p>
+  </body>
+</html>

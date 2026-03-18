@@ -1,0 +1,190 @@
+{
+  "sections": [
+    {
+      "section": "A",
+      "title": "Human Necessities (A01-A99)",
+      "classes": [
+        {
+          "code": "A01",
+          "title": "Agriculture; Forestry; Animal Husbandry; Hunting; Trapping; Fishing",
+          "description": "Technologies related to food production, farming systems, and agri-engineering equipment.",
+          "keywords": ["agriculture", "farming", "irrigation", "crop", "greenhouse"]
+        },
+        {
+          "code": "A61B",
+          "title": "Diagnosis; Surgery; Identification",
+          "description": "Medical devices and diagnostic/surgical apparatus for healthcare applications.",
+          "keywords": ["medical device", "diagnostic", "surgery", "imaging", "sensor"]
+        },
+        {
+          "code": "A61K",
+          "title": "Preparations for Medical, Dental, or Toilet Purposes",
+          "description": "Pharmaceutical and therapeutic compositions, formulations, and treatment substances.",
+          "keywords": ["pharma", "drug", "formulation", "therapeutic", "medicine"]
+        }
+      ]
+    },
+    {
+      "section": "B",
+      "title": "Performing Operations; Transporting (B01-B99)",
+      "classes": [
+        {
+          "code": "B01",
+          "title": "Physical or Chemical Processes or Apparatus",
+          "description": "Industrial process apparatus including separation, mixing, and treatment systems.",
+          "keywords": ["process engineering", "separation", "filtration", "mixing", "reactor"]
+        },
+        {
+          "code": "B25J",
+          "title": "Manipulators; Chambers Provided with Manipulation Devices",
+          "description": "Robotics manipulators and automation end-effectors for controlled movement tasks.",
+          "keywords": ["robotics", "robot arm", "manipulator", "automation", "gripper"]
+        },
+        {
+          "code": "B65D",
+          "title": "Containers for Storage or Transport of Articles or Materials",
+          "description": "Packaging and transport container innovations including smart logistics units.",
+          "keywords": ["packaging", "container", "logistics", "transport", "supply chain"]
+        }
+      ]
+    },
+    {
+      "section": "C",
+      "title": "Chemistry; Metallurgy (C01-C99)",
+      "classes": [
+        {
+          "code": "C07",
+          "title": "Organic Chemistry",
+          "description": "Organic compounds, synthesis pathways, and molecular design technologies.",
+          "keywords": ["organic chemistry", "molecule", "synthesis", "compound", "catalyst"]
+        },
+        {
+          "code": "C12N",
+          "title": "Micro-Organisms or Enzymes; Compositions Thereof",
+          "description": "Biotechnology inventions involving cells, enzymes, and genetic engineering.",
+          "keywords": ["biotech", "enzyme", "microorganism", "genetic", "fermentation"]
+        },
+        {
+          "code": "C25B",
+          "title": "Electrolytic or Electrophoretic Processes",
+          "description": "Electrochemical process systems for production and treatment applications.",
+          "keywords": ["electrochemistry", "electrolysis", "electrode", "cell", "anode"]
+        }
+      ]
+    },
+    {
+      "section": "D",
+      "title": "Textiles; Paper (D01-D99)",
+      "classes": [
+        {
+          "code": "D01",
+          "title": "Natural or Artificial Threads or Fibres",
+          "description": "Fiber and thread production technologies including functional textile materials.",
+          "keywords": ["textile", "fiber", "thread", "fabric", "weaving"]
+        },
+        {
+          "code": "D21",
+          "title": "Papermaking; Production of Cellulose",
+          "description": "Paper processing, pulp treatment, and cellulose production systems.",
+          "keywords": ["paper", "cellulose", "pulp", "papermaking", "recycling"]
+        }
+      ]
+    },
+    {
+      "section": "E",
+      "title": "Fixed Constructions (E01-E99)",
+      "classes": [
+        {
+          "code": "E04",
+          "title": "Building",
+          "description": "Building systems, structural components, and construction engineering methods.",
+          "keywords": ["construction", "building", "structure", "civil engineering", "architecture"]
+        },
+        {
+          "code": "E01",
+          "title": "Construction of Roads, Railways, or Bridges",
+          "description": "Infrastructure and transport corridor construction technologies.",
+          "keywords": ["road", "railway", "bridge", "infrastructure", "pavement"]
+        }
+      ]
+    },
+    {
+      "section": "F",
+      "title": "Mechanical Engineering; Lighting; Heating; Weapons; Blasting (F01-F99)",
+      "classes": [
+        {
+          "code": "F16",
+          "title": "Engineering Elements or Units; General Measures for Effective Functioning",
+          "description": "Core mechanical components such as couplings, bearings, joints, and drive units.",
+          "keywords": ["mechanical", "bearing", "gear", "coupling", "drive train"]
+        },
+        {
+          "code": "F24",
+          "title": "Heating; Ranges; Ventilating",
+          "description": "HVAC, thermal management, and environmental conditioning systems.",
+          "keywords": ["heating", "ventilation", "cooling", "hvac", "thermal"]
+        },
+        {
+          "code": "F03",
+          "title": "Machines or Engines for Liquids; Wind, Spring, or Gravity Motors",
+          "description": "Mechanical power generation including turbines and renewable mechanical drives.",
+          "keywords": ["turbine", "wind", "mechanical power", "engine", "generator"]
+        }
+      ]
+    },
+    {
+      "section": "G",
+      "title": "Physics (G01-G99)",
+      "classes": [
+        {
+          "code": "G06F",
+          "title": "Electric Digital Data Processing",
+          "description": "General software, computing architectures, and digital data processing systems.",
+          "keywords": ["software", "computing", "processor", "algorithm", "data processing"]
+        },
+        {
+          "code": "G06N",
+          "title": "Computing Arrangements Based on Specific Computational Models",
+          "description": "AI and machine learning models including neural and probabilistic methods.",
+          "keywords": ["machine learning", "neural network", "ai", "deep learning", "inference"]
+        },
+        {
+          "code": "G06Q",
+          "title": "Data Processing Systems for Administrative, Commercial, Financial, or Managerial Purposes",
+          "description": "Business computing platforms and enterprise information processing workflows.",
+          "keywords": ["business computing", "fintech", "enterprise", "workflow", "transaction"]
+        },
+        {
+          "code": "G01N",
+          "title": "Investigating or Analysing Materials",
+          "description": "Material analysis and sensing systems for scientific and industrial applications.",
+          "keywords": ["analysis", "sensor", "measurement", "material", "spectroscopy"]
+        }
+      ]
+    },
+    {
+      "section": "H",
+      "title": "Electricity (H01-H99)",
+      "classes": [
+        {
+          "code": "H04",
+          "title": "Electric Communication Technique",
+          "description": "Telecommunications and network communication techniques and protocols.",
+          "keywords": ["telecom", "communication", "network", "wireless", "signal"]
+        },
+        {
+          "code": "H01L",
+          "title": "Semiconductor Devices; Electric Solid State Devices",
+          "description": "Semiconductor device structures, fabrication, and solid-state electronics.",
+          "keywords": ["semiconductor", "chip", "integrated circuit", "transistor", "wafer"]
+        },
+        {
+          "code": "H02",
+          "title": "Generation, Conversion, or Distribution of Electric Power",
+          "description": "Power systems, converters, grid distribution, and energy management solutions.",
+          "keywords": ["energy", "power", "grid", "converter", "battery"]
+        }
+      ]
+    }
+  ]
+}

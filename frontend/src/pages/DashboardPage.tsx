@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import TopNav from "../components/layout/TopNav";
+import Footer from "../components/layout/Footer";
 import type { ReactElement } from "react";
 import ProjectCard from "../components/ProjectCard";
 import EmptyState from "../components/common/EmptyState";
@@ -70,6 +71,7 @@ export default function DashboardPage(): ReactElement {
           {isLoading ? <p className="text-sm text-text-secondary">Loading projects...</p> : null}
           {!isLoading && projects.length === 0 ? (
             <EmptyState
+              variant="no-projects"
               title="No projects yet"
               subtitle="Start with your first invention idea and let PatentPath guide the prior art workflow."
               steps={["Describe your idea", "Search prior art", "Get your report"]}
@@ -110,6 +112,7 @@ export default function DashboardPage(): ReactElement {
           </div>
         </section>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -2,9 +2,10 @@
  * Full project workspace page with tabbed views for searches, timeline, notes, and settings.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { ReactElement } from "react";
+import Footer from "../components/layout/Footer";
 import TopNav from "../components/layout/TopNav";
 import NotesTab from "../components/project/NotesTab";
 import ProjectSettingsTab from "../components/project/ProjectSettingsTab";
@@ -12,6 +13,7 @@ import ProjectSidebar from "../components/project/ProjectSidebar";
 import SearchHistoryTab from "../components/project/SearchHistoryTab";
 import TimelineTab from "../components/project/TimelineTab";
 import { useProjectStore } from "../store/projectStore";
+import { useReportStore } from "../store/reportStore";
 import type { ProjectUpdatePayload } from "../types/project";
 
 type WorkspaceTab = "Searches" | "Timeline" | "Notes" | "Settings";
@@ -39,6 +41,8 @@ export default function ProjectPage(): ReactElement {
   const deleteProjectNote = useProjectStore((state) => state.deleteProjectNote);
   const updateProject = useProjectStore((state) => state.updateProject);
   const archiveProject = useProjectStore((state) => state.archiveProject);
+  const completedReports = useReportStore((state) => state.completedReports);
+  const downloadCompletedReport = useReportStore((state) => state.downloadCompletedReport);
 
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("Searches");
   const [collapsedSidebar, setCollapsedSidebar] = useState(false);
@@ -128,6 +132,18 @@ export default function ProjectPage(): ReactElement {
 
   const selectedProjectId = currentProject?.id ?? id ?? "";
 
+  const reportsForProject = useMemo(
+    () => completedReports.filter((item) => item.project_id === selectedProjectId),
+    [completedReports, selectedProjectId],
+  );
+
+  const sessionDateById = useMemo(() => {
+    return currentProjectSessions.reduce<Record<string, string>>((accumulator, session) => {
+      accumulator[session.id] = session.executed_at;
+      return accumulator;
+    }, {});
+  }, [currentProjectSessions]);
+
   return (
     <div className="min-h-screen bg-surface">
       <TopNav />
@@ -206,6 +222,45 @@ export default function ProjectPage(): ReactElement {
                     </button>
                   ))}
                 </nav>
+
+                <div className="mt-4 rounded-xl border border-slate-200 bg-surface p-3">
+                  <h3 className="text-sm font-semibold text-text-primary">Reports</h3>
+                  {reportsForProject.length === 0 ? (
+                    <p className="mt-2 text-xs text-text-secondary">No generated reports for this project yet.</p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {reportsForProject.map((report) => {
+                        const sessionDate = sessionDateById[report.session_id] ?? report.session_date;
+                        const viewedText = report.viewed_at
+                          ? new Date(report.viewed_at).toLocaleString()
+                          : "Not viewed";
+
+                        return (
+                          <div
+                            key={report.job_id}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2"
+                          >
+                            <div>
+                              <p className="text-xs font-semibold text-text-primary">
+                                Session: {new Date(sessionDate).toLocaleString()}
+                              </p>
+                              <p className="text-[11px] text-text-secondary">
+                                Viewed: {viewedText}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void downloadCompletedReport(report.job_id)}
+                              className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-900"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <p className="text-sm text-text-secondary">Loading project workspace...</p>
@@ -250,6 +305,7 @@ export default function ProjectPage(): ReactElement {
           ) : null}
         </section>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -14,6 +14,7 @@ from xml.etree import ElementTree as ET
 import epo_ops
 
 from app.core.config import get_settings
+from app.core.exceptions import OPSConnectionError, OPSParseError, OPSQuotaExceededError
 from app.core.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
@@ -33,19 +34,6 @@ THROTTLE_HEADER_KEYS = (
     "x-throttling-control-header",
     "x-ops-throttle-status",
 )
-
-
-class OPSConnectionError(Exception):
-    """Raised when communication with OPS API fails."""
-
-
-class OPSParseError(Exception):
-    """Raised when OPS XML or payload cannot be parsed reliably."""
-
-
-class OPSQuotaExceededError(Exception):
-    """Raised when OPS indicates quota has been exhausted (Black status)."""
-
 
 @dataclass(slots=True)
 class RawPatentData:
@@ -223,43 +211,72 @@ class OpsConnector:
         await self._persist_token_from_client(client)
         return self._normalize_response(raw_response)
 
+    @staticmethod
+    def _can_retry(attempt: int, backoff_schedule: list[int]) -> bool:
+        return attempt < len(backoff_schedule)
+
+    @staticmethod
+    async def _sleep_backoff(attempt: int, backoff_schedule: list[int]) -> None:
+        await asyncio.sleep(backoff_schedule[attempt])
+
+    @staticmethod
+    def _log_quota_usage(headers: dict[str, str]) -> None:
+        quota = OpsConnector._read_quota_headers(headers)
+        if quota["individual_per_hour"] or quota["registered_per_week"]:
+            logger.info(
+                "OPS quota usage: individual/hour=%s, registered/week=%s",
+                quota["individual_per_hour"],
+                quota["registered_per_week"],
+            )
+
+    async def _should_retry_from_response(
+        self,
+        *,
+        status_code: int | None,
+        throttle: str,
+        attempt: int,
+        backoff_schedule: list[int],
+    ) -> bool:
+        if throttle == "BLACK":
+            raise OPSQuotaExceededError("OPS quota exceeded (Black throttle status)")
+
+        if status_code == 401:
+            await redis_client.delete(TOKEN_KEY)
+            self._client = None
+            if self._can_retry(attempt, backoff_schedule):
+                await self._sleep_backoff(attempt, backoff_schedule)
+                return True
+            raise OPSConnectionError("OPS authentication failed after token refresh attempts")
+
+        if throttle in {"YELLOW", "RED"} and self._can_retry(attempt, backoff_schedule):
+            await self._sleep_backoff(attempt, backoff_schedule)
+            return True
+
+        return False
+
     async def _request_with_retry(self, method_name: str, **kwargs: Any) -> tuple[str, dict[str, str], int | None]:
         backoff_schedule = [2, 4, 8]
 
         for attempt in range(len(backoff_schedule) + 1):
             try:
                 payload, headers, status_code = await self._call_ops_method(method_name, **kwargs)
-
-                quota = self._read_quota_headers(headers)
-                if quota["individual_per_hour"] or quota["registered_per_week"]:
-                    logger.info(
-                        "OPS quota usage: individual/hour=%s, registered/week=%s",
-                        quota["individual_per_hour"],
-                        quota["registered_per_week"],
-                    )
-
+                self._log_quota_usage(headers)
                 throttle = self._read_throttle_status(headers)
-                if throttle == "BLACK":
-                    raise OPSQuotaExceededError("OPS quota exceeded (Black throttle status)")
-
-                if status_code == 401:
-                    await redis_client.delete(TOKEN_KEY)
-                    self._client = None
-                    if attempt < len(backoff_schedule):
-                        await asyncio.sleep(backoff_schedule[attempt])
-                        continue
-                    raise OPSConnectionError("OPS authentication failed after token refresh attempts")
-
-                if throttle in {"YELLOW", "RED"} and attempt < len(backoff_schedule):
-                    await asyncio.sleep(backoff_schedule[attempt])
+                should_retry = await self._should_retry_from_response(
+                    status_code=status_code,
+                    throttle=throttle,
+                    attempt=attempt,
+                    backoff_schedule=backoff_schedule,
+                )
+                if should_retry:
                     continue
 
                 return payload, headers, status_code
             except OPSQuotaExceededError:
                 raise
             except Exception as exc:
-                if attempt < len(backoff_schedule):
-                    await asyncio.sleep(backoff_schedule[attempt])
+                if self._can_retry(attempt, backoff_schedule):
+                    await self._sleep_backoff(attempt, backoff_schedule)
                     continue
                 raise OPSConnectionError(f"OPS request failed for {method_name}: {exc}") from exc
 

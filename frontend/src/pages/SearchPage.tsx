@@ -3,15 +3,23 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import type { ReactElement } from "react";
 import TopNav from "../components/layout/TopNav";
+import Footer from "../components/layout/Footer";
 import FilterSidebar from "../components/search/FilterSidebar";
+import IPCBrowserModal from "../components/search/IPCBrowserModal";
 import PatentResultCard from "../components/search/PatentResultCard";
 import GapAnalysisPanel from "../components/analysis/GapAnalysisPanel";
 import FeasibilityWidget from "../components/analysis/FeasibilityWidget";
 import PatentDetailPanel from "../components/analysis/PatentDetailPanel";
+import ErrorBanner from "../components/common/ErrorBanner";
+import EmptyState from "../components/common/EmptyState";
+import LegalDisclaimer from "../components/common/LegalDisclaimer";
+import LoadingOverlay from "../components/common/LoadingOverlay";
+import ReportGeneratorPanel from "../components/report/ReportGeneratorPanel";
 import apiClient from "../api/client";
+import { exportResultsToCSV } from "../utils/exportUtils";
 import type {
   ExecuteSearchResponse,
   RiskLabel,
@@ -39,6 +47,28 @@ const PHASE_MESSAGES = [
   "Generating gap analysis...",
 ];
 
+type ExecuteErrorInfo = {
+  errorCode?: string;
+  message: string;
+  retryAfterSeconds?: number;
+};
+
+function parseExecuteError(error: unknown): ExecuteErrorInfo {
+  const maybeResponse = (error as { response?: { data?: unknown } })?.response;
+  const maybeData = maybeResponse?.data as {
+    detail?: string;
+    message?: string;
+    error_code?: string;
+    retry_after_seconds?: number;
+  } | undefined;
+
+  return {
+    errorCode: maybeData?.error_code,
+    message: maybeData?.message || maybeData?.detail || "Search execution failed. Please try again.",
+    retryAfterSeconds: maybeData?.retry_after_seconds,
+  };
+}
+
 function emptySearchFilters(): SearchFilters {
   return {
     country_codes: [],
@@ -50,6 +80,7 @@ function emptySearchFilters(): SearchFilters {
 
 export default function SearchPage(): ReactElement {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const [searchParams] = useSearchParams();
   const projects = useProjectStore((state) => state.projects);
   const fetchProjects = useProjectStore((state) => state.fetchProjects);
   const setCurrentProject = useProjectStore((state) => state.setCurrentProject);
@@ -67,6 +98,8 @@ export default function SearchPage(): ReactElement {
   const [results, setResults] = useState<ScoredResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<ScoredResult | null>(null);
   const [searchSessionId, setSearchSessionId] = useState<string>(sessionId ?? "");
+  const [ipcModalOpen, setIpcModalOpen] = useState(false);
+  const [executeError, setExecuteError] = useState<ExecuteErrorInfo | null>(null);
   const [resultFilters, setResultFilters] = useState<ResultFilters>({
     risk: "ALL",
     country: "",
@@ -101,6 +134,40 @@ export default function SearchPage(): ReactElement {
       setSearchSessionId(sessionId);
     }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (searchParams.get("rerun") !== "1") {
+      return;
+    }
+
+    const rawPayload = globalThis.sessionStorage.getItem("patentpath-rerun-session");
+    if (!rawPayload) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(rawPayload) as {
+        project_id?: string;
+        query_text?: string;
+        cql_generated?: string;
+      };
+
+      if (payload.project_id) {
+        setActiveProjectId(payload.project_id);
+      }
+      if (payload.query_text) {
+        setQueryText(payload.query_text);
+      }
+      if (payload.cql_generated) {
+        setCqlText(payload.cql_generated);
+        setStep(2);
+      }
+    } catch {
+      // Ignore malformed rerun payload and continue with default empty form state.
+    } finally {
+      globalThis.sessionStorage.removeItem("patentpath-rerun-session");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (step !== 4 || !searchSessionId) {
@@ -156,21 +223,22 @@ export default function SearchPage(): ReactElement {
   const simulateLoadingPhases = (): void => {
     setLoadingPhase(0);
     let current = 0;
-    const intervalId = window.setInterval(() => {
+    const intervalId = globalThis.setInterval(() => {
       current += 1;
       setLoadingPhase(Math.min(current, PHASE_MESSAGES.length - 1));
       if (current >= PHASE_MESSAGES.length - 1) {
-        window.clearInterval(intervalId);
+        globalThis.clearInterval(intervalId);
       }
     }, 1200);
   };
 
   const handleExecute = async (): Promise<void> => {
-    if (!activeProjectId || !cqlText.trim()) {
+    if (!activeProjectId || queryText.trim().length < 10) {
       return;
     }
 
     resetAnalysis();
+    setExecuteError(null);
     setSearchSessionId("");
     setIsExecuting(true);
     setStep(3);
@@ -202,13 +270,41 @@ export default function SearchPage(): ReactElement {
       setResults(sortedResults);
       setSelectedResult(sortedResults[0] ?? null);
       setStep(4);
-    } catch {
+    } catch (error: unknown) {
       setResults([]);
       setSelectedResult(null);
       setSearchSessionId("");
+      setExecuteError(parseExecuteError(error));
     } finally {
       setIsExecuting(false);
     }
+  };
+
+  const handleCopyCql = async (): Promise<void> => {
+    if (!cqlText.trim()) {
+      return;
+    }
+    await navigator.clipboard.writeText(cqlText);
+  };
+
+  const handleExportResults = async (): Promise<void> => {
+    if (searchSessionId) {
+      const response = await apiClient.get(`/search/session/${searchSessionId}/results/export`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `patentpath_results_${searchSessionId}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    exportResultsToCSV(results, `patentpath_results_${Date.now()}.csv`);
   };
 
   const toggleCountry = (country: string): void => {
@@ -236,7 +332,7 @@ export default function SearchPage(): ReactElement {
               {collapsedSidebar ? "Expand" : "Collapse"}
             </button>
           </div>
-          {!collapsedSidebar ? (
+          {collapsedSidebar ? null : (
             <div className="mt-3 space-y-2">
               {projects.map((project) => (
                 <button
@@ -256,7 +352,7 @@ export default function SearchPage(): ReactElement {
                 </button>
               ))}
             </div>
-          ) : null}
+          )}
         </aside>
 
         <section className="space-y-5">
@@ -286,6 +382,12 @@ export default function SearchPage(): ReactElement {
             <textarea
               value={queryText}
               onChange={(event) => setQueryText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.ctrlKey && event.key === "Enter") {
+                  event.preventDefault();
+                  void handleExecute();
+                }
+              }}
               className="mt-3 h-36 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-text-primary outline-none focus:border-accent"
               placeholder="Describe your invention with technical details, architecture, and novelty targets..."
             />
@@ -320,7 +422,16 @@ export default function SearchPage(): ReactElement {
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
-            <h2 className="text-lg font-semibold text-text-primary">Step 2 — Review & Refine Query</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-text-primary">Step 2 — Review & Refine Query</h2>
+              <button
+                type="button"
+                onClick={() => void handleCopyCql()}
+                className="rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-white"
+              >
+                Copy CQL
+              </button>
+            </div>
             <textarea
               value={cqlText}
               onChange={(event) => setCqlText(event.target.value)}
@@ -330,7 +441,7 @@ export default function SearchPage(): ReactElement {
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="text-sm text-text-secondary">
-                Date from
+                <span>Date from</span>
                 <input
                   type="date"
                   value={filters.date_from ?? ""}
@@ -339,7 +450,7 @@ export default function SearchPage(): ReactElement {
                 />
               </label>
               <label className="text-sm text-text-secondary">
-                Date to
+                <span>Date to</span>
                 <input
                   type="date"
                   value={filters.date_to ?? ""}
@@ -368,21 +479,30 @@ export default function SearchPage(): ReactElement {
                 </div>
               </label>
               <label className="text-sm text-text-secondary">
-                IPC Classes
-                <input
-                  type="text"
-                  value={filters.ipc_classes.join(",")}
-                  onChange={(event) =>
-                    setFilters((state) => ({
-                      ...state,
-                      ipc_classes: event.target.value
-                        .split(",")
-                        .map((item) => item.trim().toUpperCase())
-                        .filter(Boolean),
-                    }))
-                  }
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-text-primary outline-none focus:border-accent"
-                />
+                <span>IPC Classes</span>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={filters.ipc_classes.join(",")}
+                    onChange={(event) =>
+                      setFilters((state) => ({
+                        ...state,
+                        ipc_classes: event.target.value
+                          .split(",")
+                          .map((item) => item.trim().toUpperCase())
+                          .filter(Boolean),
+                      }))
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-text-primary outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIpcModalOpen(true)}
+                    className="rounded-lg border border-primary/35 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5"
+                  >
+                    Browse IPC/CPC
+                  </button>
+                </div>
               </label>
               <label className="text-sm text-text-secondary">
                 Applicant
@@ -394,7 +514,7 @@ export default function SearchPage(): ReactElement {
                 />
               </label>
               <label className="text-sm text-text-secondary md:col-span-2">
-                Legal status
+                <span>Legal status</span>
                 <select
                   value={filters.legal_status ?? ""}
                   onChange={(event) => setFilters((state) => ({ ...state, legal_status: event.target.value }))}
@@ -418,7 +538,29 @@ export default function SearchPage(): ReactElement {
           </article>
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
-            <h2 className="text-lg font-semibold text-text-primary">Step 3 — Prior Art Results</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-text-primary">Step 3 — Prior Art Results</h2>
+              <button
+                type="button"
+                disabled={results.length === 0}
+                onClick={() => void handleExportResults()}
+                className="rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Export Results CSV
+              </button>
+            </div>
+
+            {executeError ? (
+              <div className="mt-3">
+                <ErrorBanner
+                  errorCode={executeError.errorCode}
+                  message={executeError.message}
+                  retryAfterSeconds={executeError.retryAfterSeconds}
+                  onDismiss={() => setExecuteError(null)}
+                />
+              </div>
+            ) : null}
+
             {isExecuting ? (
               <div className="mt-3 rounded-xl bg-surface p-4">
                 <p className="text-sm font-medium text-primary">{PHASE_MESSAGES[loadingPhase]}</p>
@@ -432,9 +574,11 @@ export default function SearchPage(): ReactElement {
               <FilterSidebar filters={resultFilters} onChange={setResultFilters} />
               <div className="space-y-3">
                 {filteredResults.length === 0 ? (
-                  <p className="rounded-lg bg-surface p-4 text-sm text-text-secondary">
-                    No results yet. Execute the search to see ranked patents.
-                  </p>
+                  <EmptyState
+                    variant="no-results"
+                    title="No Results Yet"
+                    subtitle="Execute a search to generate ranked prior art results and score breakdowns."
+                  />
                 ) : (
                   filteredResults.map((result) => (
                     <PatentResultCard key={`${result.patent.publication_number}-${result.rank}`} result={result} onExpand={setSelectedResult} />
@@ -446,9 +590,7 @@ export default function SearchPage(): ReactElement {
 
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
             <h2 className="text-lg font-semibold text-text-primary">Step 4 — Gap Analysis</h2>
-            <p className="mt-3 rounded-lg border border-risk-medium/40 bg-risk-medium/10 p-3 text-sm text-text-primary">
-              ⚠ This is a computational heuristic, not legal advice. Consult a patent attorney before filing.
-            </p>
+            <LegalDisclaimer className="mt-3" />
 
             <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
               <FeasibilityWidget
@@ -461,6 +603,19 @@ export default function SearchPage(): ReactElement {
                 error={analysisError}
               />
             </div>
+
+            <div className="mt-5">
+              <ReportGeneratorPanel
+                projectId={activeProjectId}
+                sessionId={searchSessionId}
+                enabled={Boolean(
+                  activeProjectId
+                  && searchSessionId
+                  && analysisStatus === "complete"
+                  && gapAnalysis,
+                )}
+              />
+            </div>
           </article>
         </section>
 
@@ -468,6 +623,16 @@ export default function SearchPage(): ReactElement {
           <PatentDetailPanel selectedResult={selectedResult} />
         </aside>
       </main>
+
+      <IPCBrowserModal
+        isOpen={ipcModalOpen}
+        initialSelected={filters.ipc_classes}
+        onApply={(codes) => setFilters((state) => ({ ...state, ipc_classes: codes }))}
+        onClose={() => setIpcModalOpen(false)}
+      />
+
+      {isExecuting ? <LoadingOverlay message={PHASE_MESSAGES[loadingPhase] ?? "Processing search..."} /> : null}
+      <Footer />
     </div>
   );
 }

@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
+import csv
+import io
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.middleware.rate_limiter import enforce_search_rate_limit
 from app.models.innovation_project import InnovationProject
+from app.models.scored_result import ScoredResult
 from app.models.scored_result import RiskLabel
 from app.models.search_session import SearchSession, SearchSessionStatus
 from app.schemas.filters import SearchFilters
@@ -30,6 +36,7 @@ from app.services.search_service import get_search_stats, get_session_results as
 from app.worker.celery_app import celery_app
 
 router = APIRouter(prefix="/search", tags=["search"])
+SESSION_NOT_FOUND_DETAIL = "Search session not found"
 
 auth_scheme = HTTPBearer(auto_error=False)
 
@@ -137,7 +144,7 @@ async def preview_query(
 async def execute_search(
 	payload: ExecuteSearchRequest,
 	db: Annotated[AsyncSession, Depends(get_db)],
-	_: Annotated[str, Depends(require_auth_token)],
+	_: Annotated[str, Depends(enforce_search_rate_limit)],
 ) -> ExecuteSearchResponse:
 	"""Create a pending search session and dispatch async processing through Celery."""
 	project = await db.scalar(
@@ -184,7 +191,7 @@ async def get_session(
 	"""Return a search session by ID."""
 	session = await db.scalar(select(SearchSession).where(SearchSession.id == session_id))
 	if session is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Search session not found")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=SESSION_NOT_FOUND_DETAIL)
 	return SearchSessionRead.model_validate(session)
 
 
@@ -224,7 +231,7 @@ async def save_patent_to_project(
 		.where(SearchSession.id == session_id, InnovationProject.user_id == user_id)
 	)
 	if session is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Search session not found")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=SESSION_NOT_FOUND_DETAIL)
 
 	saved_patents = list((session.filters_json or {}).get("saved_patents", []))
 	publication_number = payload.publication_number.strip().upper()
@@ -260,3 +267,59 @@ async def get_session_stats(
 	"""Return aggregated metrics for the search results dashboard widget."""
 	user_id = _resolve_user_id_from_token(token)
 	return await get_search_stats(db=db, session_id=session_id, user_id=user_id)
+
+
+@router.get("/session/{session_id}/results/export")
+async def export_session_results_csv(
+	session_id: UUID,
+	db: Annotated[AsyncSession, Depends(get_db)],
+	token: Annotated[str, Depends(require_auth_token)],
+) -> StreamingResponse:
+	"""Export all scored results for a session as a downloadable CSV file."""
+	user_id = _resolve_user_id_from_token(token)
+	session = await db.scalar(
+		select(SearchSession)
+		.join(InnovationProject, InnovationProject.id == SearchSession.project_id)
+		.where(SearchSession.id == session_id, InnovationProject.user_id == user_id)
+	)
+	if session is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=SESSION_NOT_FOUND_DETAIL)
+
+	rows = list(
+		(
+			await db.execute(
+				select(ScoredResult)
+				.where(ScoredResult.session_id == session_id)
+				.options(selectinload(ScoredResult.patent))
+				.order_by(ScoredResult.rank.asc())
+			)
+		).scalars()
+	)
+
+	buffer = io.StringIO()
+	writer = csv.writer(buffer)
+	writer.writerow([
+		"Rank",
+		"Publication Number",
+		"Title",
+		"Composite Score",
+		"Risk Label",
+		"Espacenet URL",
+	])
+	for result in rows:
+		if result.patent is None:
+			continue
+		writer.writerow([
+			result.rank,
+			result.patent.publication_number,
+			result.patent.title,
+			f"{result.composite_score:.4f}",
+			result.risk_label.value,
+			result.patent.espacenet_url,
+		])
+
+	buffer.seek(0)
+	headers = {
+		"Content-Disposition": f'attachment; filename="patentpath_results_{session_id}.csv"',
+	}
+	return StreamingResponse(iter([buffer.getvalue()]), media_type="text/csv", headers=headers)

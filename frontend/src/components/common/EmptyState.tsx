@@ -4,12 +4,28 @@
 
 import type { ReactElement } from "react";
 
+type EmptyStateVariant =
+  | "no-projects"
+  | "no-results"
+  | "no-analysis"
+  | "search-error"
+  | "quota-exceeded";
+
 type EmptyStateProps = {
   title: string;
   subtitle: string;
   steps?: string[];
   actionLabel?: string;
   onAction?: () => void;
+  variant?: EmptyStateVariant;
+};
+
+const VARIANT_ICON: Record<EmptyStateVariant, string> = {
+  "no-projects": "Folder",
+  "no-results": "Search",
+  "no-analysis": "Insight",
+  "search-error": "Warning",
+  "quota-exceeded": "Timer",
 };
 
 export default function EmptyState({
@@ -18,9 +34,11 @@ export default function EmptyState({
   steps = [],
   actionLabel,
   onAction,
-}: EmptyStateProps): ReactElement {
+  variant = "no-projects",
+}: Readonly<EmptyStateProps>): ReactElement {
   return (
     <div className="rounded-2xl border border-dashed border-accent/50 bg-white p-6 shadow-panel">
+      <p className="text-xs font-semibold uppercase tracking-widest text-accent">{VARIANT_ICON[variant]}</p>
       <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
       <p className="mt-2 text-sm text-text-secondary">{subtitle}</p>
       {steps.length > 0 ? (

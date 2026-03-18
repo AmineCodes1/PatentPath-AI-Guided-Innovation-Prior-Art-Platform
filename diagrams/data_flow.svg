@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="900" viewBox="0 0 1700 900" role="img" aria-labelledby="title desc">
+  <title id="title">PatentPath System Data Flow</title>
+  <desc id="desc">Data flow among browser, nginx, backend, storage, workers, and external APIs.</desc>
+  <defs>
+    <style>
+      .text { fill: #1A1A2E; font-family: Arial, Helvetica, sans-serif; }
+      .title { font-size: 30px; font-weight: 700; }
+      .node { fill: #eef3ff; stroke: #003399; stroke-width: 2.2; rx: 14; ry: 14; }
+      .infra { fill: #f6f8fc; stroke: #5580C8; stroke-width: 2; rx: 14; ry: 14; }
+      .external { fill: #fff4e8; stroke: #ed7d31; stroke-width: 2; rx: 14; ry: 14; }
+      .worker { fill: #ecf6ea; stroke: #548235; stroke-width: 2; rx: 14; ry: 14; }
+      .label { font-size: 18px; font-weight: 700; }
+      .small { font-size: 13px; font-weight: 600; }
+      .line { stroke: #003399; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .line2 { stroke: #5580C8; stroke-width: 2; fill: none; marker-end: url(#arrow2); }
+      .line3 { stroke: #548235; stroke-width: 2.2; fill: none; marker-end: url(#arrow3); }
+      .data { fill: #003399; font-size: 12px; font-weight: 700; font-family: Arial, Helvetica, sans-serif; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#003399" />
+    </marker>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5580C8" />
+    </marker>
+    <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#548235" />
+    </marker>
+  </defs>
+
+  <text x="60" y="64" class="text title">PatentPath Data Flow Architecture</text>
+
+  <rect x="80" y="180" width="250" height="110" class="node" />
+  <text x="205" y="225" class="text label" text-anchor="middle">Browser</text>
+  <text x="205" y="250" class="text small" text-anchor="middle">React SPA</text>
+
+  <rect x="430" y="180" width="220" height="110" class="node" />
+  <text x="540" y="225" class="text label" text-anchor="middle">Nginx</text>
+  <text x="540" y="250" class="text small" text-anchor="middle">Reverse Proxy</text>
+
+  <rect x="760" y="160" width="300" height="140" class="node" />
+  <text x="910" y="220" class="text label" text-anchor="middle">FastAPI Backend</text>
+  <text x="910" y="246" class="text small" text-anchor="middle">Auth, Search, Analysis, Reports</text>
+
+  <rect x="1180" y="120" width="430" height="250" class="infra" />
+  <text x="1205" y="152" class="text small">Core Data Services</text>
+
+  <rect x="1220" y="175" width="160" height="80" class="node" />
+  <text x="1300" y="215" class="text small" text-anchor="middle">PostgreSQL</text>
+
+  <rect x="1410" y="175" width="160" height="80" class="node" />
+  <text x="1490" y="215" class="text small" text-anchor="middle">Redis</text>
+
+  <rect x="1315" y="270" width="170" height="80" class="worker" />
+  <text x="1400" y="312" class="text small" text-anchor="middle">Celery Worker</text>
+
+  <rect x="790" y="430" width="260" height="100" class="worker" />
+  <text x="920" y="470" class="text label" text-anchor="middle">NLP Pipeline</text>
+  <text x="920" y="495" class="text small" text-anchor="middle">BM25 + TF-IDF + MiniLM</text>
+
+  <rect x="1120" y="430" width="220" height="100" class="node" />
+  <text x="1230" y="470" class="text label" text-anchor="middle">Score DB</text>
+  <text x="1230" y="495" class="text small" text-anchor="middle">ScoredResult table</text>
+
+  <rect x="80" y="560" width="300" height="120" class="external" />
+  <text x="230" y="607" class="text label" text-anchor="middle">EPO OPS API</text>
+  <text x="230" y="632" class="text small" text-anchor="middle">Espacenet + OAuth2</text>
+
+  <rect x="450" y="560" width="300" height="120" class="external" />
+  <text x="600" y="607" class="text label" text-anchor="middle">Anthropic Claude API</text>
+  <text x="600" y="632" class="text small" text-anchor="middle">Gap analysis narratives</text>
+
+  <path d="M330 235 L430 235" class="line" />
+  <path d="M430 265 L330 265" class="line" />
+  <text x="360" y="225" class="data">REST JSON</text>
+  <text x="350" y="286" class="data">HTML/CSS/JS</text>
+
+  <path d="M650 235 L760 235" class="line" />
+  <path d="M760 265 L650 265" class="line" />
+  <text x="680" y="225" class="data">/api/v1 JSON</text>
+  <text x="680" y="286" class="data">JWT Bearer</text>
+
+  <path d="M1060 210 L1220 210" class="line2" />
+  <path d="M1220 240 L1060 240" class="line2" />
+  <text x="1115" y="198" class="data">SQL + ORM</text>
+
+  <path d="M1060 260 L1410 215" class="line2" />
+  <path d="M1410 240 L1060 280" class="line2" />
+  <text x="1180" y="286" class="data">Cache / Broker</text>
+
+  <path d="M1000 300 L1335 270" class="line2" />
+  <text x="1110" y="320" class="data">Task dispatch</text>
+
+  <path d="M1400 350 L1400 430 L1050 430" class="line3" />
+  <text x="1245" y="418" class="data">Patent corpus batch</text>
+
+  <path d="M1050 480 L1120 480" class="line3" />
+  <text x="1060" y="468" class="data">Composite scores</text>
+
+  <path d="M830 300 L270 560" class="line" />
+  <path d="M250 560 L830 300" class="line" />
+  <text x="470" y="500" class="data">CQL Query</text>
+  <text x="405" y="536" class="data">XML Response</text>
+  <text x="330" y="470" class="data">Bearer Token</text>
+
+  <path d="M870 300 L650 560" class="line" />
+  <path d="M690 560 L930 300" class="line" />
+  <text x="700" y="490" class="data">Prompt JSON</text>
+  <text x="700" y="530" class="data">Analysis Response</text>
+</svg>

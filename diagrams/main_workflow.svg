@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="560" viewBox="0 0 2200 560" role="img" aria-labelledby="title desc">
+  <title id="title">PatentPath Main Workflow</title>
+  <desc id="desc">End-to-end workflow from login to report generation with decision points.</desc>
+  <defs>
+    <style>
+      .proc { fill: #eef3ff; stroke: #003399; stroke-width: 2; rx: 10; ry: 10; }
+      .decision { fill: #fff7e8; stroke: #003399; stroke-width: 2; }
+      .text { fill: #1A1A2E; font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 600; }
+      .small { font-size: 12px; font-weight: 500; }
+      .line { stroke: #003399; stroke-width: 2.3; fill: none; marker-end: url(#arrow); }
+      .loop { stroke: #5580C8; stroke-width: 2.3; fill: none; marker-end: url(#arrowLoop); }
+      .yesno { fill: #003399; font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 700; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#003399" />
+    </marker>
+    <marker id="arrowLoop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5580C8" />
+    </marker>
+  </defs>
+
+  <rect x="20" y="220" width="95" height="48" class="proc" />
+  <text x="67" y="250" class="text" text-anchor="middle">START</text>
+
+  <rect x="150" y="205" width="145" height="78" class="proc" />
+  <text x="222" y="238" class="text" text-anchor="middle">Login /</text>
+  <text x="222" y="258" class="text" text-anchor="middle">Register</text>
+
+  <rect x="330" y="205" width="145" height="78" class="proc" />
+  <text x="402" y="248" class="text" text-anchor="middle">Create Project</text>
+
+  <rect x="510" y="198" width="170" height="92" class="proc" />
+  <text x="595" y="235" class="text" text-anchor="middle">Input Problem</text>
+  <text x="595" y="255" class="text" text-anchor="middle">Statement</text>
+
+  <rect x="715" y="198" width="170" height="92" class="proc" />
+  <text x="800" y="235" class="text" text-anchor="middle">IPC Class</text>
+  <text x="800" y="255" class="text" text-anchor="middle">Suggestion</text>
+
+  <rect x="920" y="198" width="145" height="92" class="proc" />
+  <text x="992" y="245" class="text" text-anchor="middle">Generate CQL</text>
+
+  <rect x="1100" y="198" width="160" height="92" class="proc" />
+  <text x="1180" y="235" class="text" text-anchor="middle">Review / Edit</text>
+  <text x="1180" y="255" class="text" text-anchor="middle">Query</text>
+
+  <rect x="1295" y="198" width="165" height="92" class="proc" />
+  <text x="1377" y="235" class="text" text-anchor="middle">Execute OPS</text>
+  <text x="1377" y="255" class="text" text-anchor="middle">Search</text>
+
+  <rect x="1495" y="186" width="185" height="116" class="proc" />
+  <text x="1587" y="228" class="text" text-anchor="middle">Score Patents</text>
+  <text x="1587" y="248" class="small" text-anchor="middle">(NLP Pipeline)</text>
+
+  <rect x="1715" y="198" width="160" height="92" class="proc" />
+  <text x="1795" y="248" class="text" text-anchor="middle">Display Results</text>
+
+  <polygon points="1945,244 2020,184 2095,244 2020,304" class="decision" />
+  <text x="2020" y="238" class="text" text-anchor="middle">Satisfied?</text>
+
+  <rect x="1940" y="350" width="160" height="88" class="proc" />
+  <text x="2020" y="388" class="text" text-anchor="middle">Trigger Gap</text>
+  <text x="2020" y="408" class="text" text-anchor="middle">Analysis</text>
+
+  <rect x="1730" y="350" width="175" height="88" class="proc" />
+  <text x="1817" y="388" class="text" text-anchor="middle">Review Gaps</text>
+
+  <polygon points="1560,394 1635,334 1710,394 1635,454" class="decision" />
+  <text x="1635" y="388" class="text" text-anchor="middle">Refine?</text>
+
+  <rect x="1365" y="350" width="160" height="88" class="proc" />
+  <text x="1445" y="387" class="text" text-anchor="middle">Generate PDF</text>
+  <text x="1445" y="407" class="text" text-anchor="middle">Report</text>
+
+  <rect x="1170" y="370" width="130" height="48" class="proc" />
+  <text x="1235" y="400" class="text" text-anchor="middle">END</text>
+
+  <path d="M115 244 L150 244" class="line" />
+  <path d="M295 244 L330 244" class="line" />
+  <path d="M475 244 L510 244" class="line" />
+  <path d="M680 244 L715 244" class="line" />
+  <path d="M885 244 L920 244" class="line" />
+  <path d="M1065 244 L1100 244" class="line" />
+  <path d="M1260 244 L1295 244" class="line" />
+  <path d="M1460 244 L1495 244" class="line" />
+  <path d="M1680 244 L1715 244" class="line" />
+  <path d="M1875 244 L1945 244" class="line" />
+
+  <path d="M2020 304 L2020 350" class="line" />
+  <text x="2032" y="330" class="yesno">Yes</text>
+
+  <path d="M1940 394 L1905 394" class="line" />
+  <path d="M1730 394 L1710 394" class="line" />
+  <path d="M1560 394 L1525 394" class="line" />
+  <path d="M1365 394 L1300 394" class="line" />
+  <path d="M2095 244 L2145 244 L2145 394 L2100 394" class="line" />
+  <text x="2110" y="234" class="yesno">No</text>
+
+  <path d="M1635 334 L1635 150 L1180 150 L1180 198" class="loop" />
+  <text x="1648" y="324" class="yesno">Yes</text>
+  <text x="1648" y="306" class="small" fill="#5580C8">Loop to Query Refinement</text>
+
+  <text x="1540" y="470" class="yesno">No</text>
+</svg>
