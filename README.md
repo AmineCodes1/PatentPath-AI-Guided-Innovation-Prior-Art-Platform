@@ -75,9 +75,9 @@ PatentPath was developed for:
 
 ## Team
 
-- Team member 1: <name>
-- Team member 2: <name>
-- Team member 3: <name>
+- Team member 1: ABDELMOUMEN Mohamed Amine
+- Team member 2: BAHI Mehdi
+
 
 ## Legal and Disclaimer
 
@@ -87,4 +87,4 @@ Always consult a qualified patent attorney or patent agent before filing a paten
 ## License
 
 MIT License.
-See [LICENSE](LICENSE) if included, or add an MIT license file before distribution.
+See [LICENSE](LICENSE)
