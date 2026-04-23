@@ -86,5 +86,4 @@ Always consult a qualified patent attorney or patent agent before filing a paten
 
 ## License
 
-MIT License.
-See [LICENSE](LICENSE)
+MIT License [LICENSE](LICENSE)
