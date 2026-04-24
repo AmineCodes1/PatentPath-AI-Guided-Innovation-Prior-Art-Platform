@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.core.database import SessionLocal
+from app.core.database import worker_session
 from app.services.gap_analysis_service import run_gap_analysis
 from app.worker.celery_app import celery_app
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def _run_gap_analysis_async(session_id: str) -> dict[str, object]:
-    async with SessionLocal() as db:
+    async with worker_session() as db:
         analysis = await run_gap_analysis(db=db, session_id=session_id)
         return {
             "session_id": session_id,

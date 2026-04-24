@@ -7,7 +7,7 @@ import base64
 import logging
 from uuid import UUID
 
-from app.core.database import SessionLocal
+from app.core.database import worker_session
 from app.core.redis_client import redis_client
 from app.services.report_service import generate_pdf_report
 from app.worker.celery_app import celery_app
@@ -18,7 +18,7 @@ _REPORT_TTL_SECONDS = 3600
 
 
 async def _generate_report_async(project_id: str, session_id: str, user_id: str, job_id: str) -> dict[str, str]:
-    async with SessionLocal() as db:
+    async with worker_session() as db:
         pdf_bytes = await generate_pdf_report(
             db=db,
             project_id=UUID(project_id),

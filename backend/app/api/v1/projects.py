@@ -6,12 +6,13 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.models.user import User
 from app.schemas.innovation_project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_service import (
     archive_project,
@@ -29,33 +30,6 @@ from app.services.project_service import (
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
-
-auth_scheme = HTTPBearer(auto_error=False)
-
-
-def require_auth_token(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(auth_scheme)],
-) -> str:
-    """Temporary auth guard requiring a Bearer token."""
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return credentials.credentials
-
-
-def _resolve_user_id_from_token(token: str) -> UUID:
-    """Temporary user resolution until full JWT dependency is wired."""
-    try:
-        return UUID(token.strip())
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token format",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
 
 
 class ProjectSessionSummary(BaseModel):
@@ -110,22 +84,20 @@ class ProjectNoteRead(BaseModel):
 async def create_project_endpoint(
     payload: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProjectRead:
     """Create an innovation project for the authenticated user."""
-    user_id = _resolve_user_id_from_token(token)
-    project = await create_project(db=db, user_id=user_id, data=payload)
+    project = await create_project(db=db, user_id=current_user.id, data=payload)
     return ProjectRead.model_validate(project).model_copy(update={"sessions_count": 0})
 
 
 @router.get("")
 async def list_projects_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[ProjectRead]:
     """List all projects owned by the authenticated user."""
-    user_id = _resolve_user_id_from_token(token)
-    projects = await get_user_projects(db=db, user_id=user_id)
+    projects = await get_user_projects(db=db, user_id=current_user.id)
     return [
         ProjectRead.model_validate(project).model_copy(update={"sessions_count": len(project.search_sessions)})
         for project in projects
@@ -136,11 +108,10 @@ async def list_projects_endpoint(
 async def get_project_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProjectRead:
     """Return details of one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    project = await get_project(db=db, project_id=project_id, user_id=user_id)
+    project = await get_project(db=db, project_id=project_id, user_id=current_user.id)
     return ProjectRead.model_validate(project).model_copy(update={"sessions_count": len(project.search_sessions)})
 
 
@@ -149,11 +120,10 @@ async def update_project_endpoint(
     project_id: UUID,
     payload: ProjectUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProjectRead:
     """Update fields of one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    updated = await update_project(db=db, project_id=project_id, user_id=user_id, data=payload)
+    updated = await update_project(db=db, project_id=project_id, user_id=current_user.id, data=payload)
     sessions = await get_project_sessions(db=db, project_id=project_id)
     return ProjectRead.model_validate(updated).model_copy(update={"sessions_count": len(sessions)})
 
@@ -162,11 +132,10 @@ async def update_project_endpoint(
 async def archive_project_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProjectRead:
     """Archive an owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    archived = await archive_project(db=db, project_id=project_id, user_id=user_id)
+    archived = await archive_project(db=db, project_id=project_id, user_id=current_user.id)
     sessions = await get_project_sessions(db=db, project_id=project_id)
     return ProjectRead.model_validate(archived).model_copy(update={"sessions_count": len(sessions)})
 
@@ -175,11 +144,10 @@ async def archive_project_endpoint(
 async def list_project_sessions_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[ProjectSessionSummary]:
     """List search sessions for one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     sessions = await get_project_sessions(db=db, project_id=project_id)
     return [
         ProjectSessionSummary(
@@ -198,11 +166,10 @@ async def list_project_sessions_endpoint(
 async def get_project_timeline_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[TimelineEventRead]:
     """Return timeline events for one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     timeline = await get_project_timeline(db=db, project_id=project_id)
     return [TimelineEventRead.model_validate(timeline_to_dict(event)) for event in timeline]
 
@@ -211,11 +178,10 @@ async def get_project_timeline_endpoint(
 async def get_project_risk_trend_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[dict[str, object]]:
     """Return novelty trend series for one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     return await get_project_risk_trend(db=db, project_id=project_id)
 
 
@@ -224,11 +190,10 @@ async def create_project_note_endpoint(
     project_id: UUID,
     payload: ProjectNoteCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> ProjectNoteRead:
     """Create a note for one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     note = await create_project_note(
         db=db,
         project_id=project_id,
@@ -243,23 +208,22 @@ async def create_project_note_endpoint(
 async def list_project_notes_endpoint(
     project_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[ProjectNoteRead]:
     """List notes for one owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     notes = await list_project_notes(db=db, project_id=project_id)
     return [ProjectNoteRead.model_validate(note) for note in notes]
 
 
-@router.delete("/{project_id}/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}/notes/{note_id}")
 async def delete_project_note_endpoint(
     project_id: UUID,
     note_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
-    token: Annotated[str, Depends(require_auth_token)],
-) -> None:
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> Response:
     """Delete one note from an owned project."""
-    user_id = _resolve_user_id_from_token(token)
-    await get_project(db=db, project_id=project_id, user_id=user_id)
+    await get_project(db=db, project_id=project_id, user_id=current_user.id)
     await delete_project_note(db=db, project_id=project_id, note_id=note_id)
+    return Response(status_code=204)

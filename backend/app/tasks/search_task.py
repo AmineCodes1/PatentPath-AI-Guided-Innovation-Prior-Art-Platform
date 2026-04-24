@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 
-from app.core.database import SessionLocal
+from app.core.database import worker_session
 from app.models.scored_result import ScoredResult
 from app.models.search_session import SearchSession, SearchSessionStatus
 from app.schemas.filters import SearchFilters
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 async def _mark_session_failed(session_id: str, error_message: str) -> None:
     """Persist failed status and failure details for a search session."""
     session_uuid = UUID(session_id)
-    async with SessionLocal() as db:
+    async with worker_session() as db:
         session = await db.scalar(select(SearchSession).where(SearchSession.id == session_uuid))
         if session is None:
             return
@@ -40,7 +40,7 @@ async def _run_patent_search_async(session_id: str) -> dict[str, object]:
     """Run the async search flow for one search session."""
     session_uuid = UUID(session_id)
 
-    async with SessionLocal() as db:
+    async with worker_session() as db:
         session = await db.scalar(select(SearchSession).where(SearchSession.id == session_uuid))
         if session is None:
             raise ValueError(f"Search session not found: {session_id}")

@@ -40,7 +40,7 @@ export default function RegisterPage(): ReactElement {
         password,
       });
       const tokenPayload = await login({ email, password });
-      const user = await getMe();
+      const user = await getMe(tokenPayload.access_token);
       storeLogin(tokenPayload.access_token, user);
       navigate("/dashboard", { replace: true });
     } catch {
