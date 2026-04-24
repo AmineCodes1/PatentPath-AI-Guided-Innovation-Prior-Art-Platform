@@ -533,4 +533,12 @@ class OpsConnector:
         return family_refs
 
 
-ops_connector = OpsConnector()
+def _make_connector():
+    from app.services.mock_ops_connector import mock_ops_connector
+    settings = get_settings()
+    if not settings.epo_consumer_key or not settings.epo_consumer_secret:
+        return mock_ops_connector
+    return OpsConnector()
+
+
+ops_connector = _make_connector()

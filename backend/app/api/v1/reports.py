@@ -9,53 +9,25 @@ from uuid import UUID
 from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.api.deps import get_current_user
 from app.core.redis_client import redis_client
+from app.models.user import User
 from app.schemas.report import ReportRequest, ReportStatusRead
 from app.worker.celery_app import celery_app
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
-auth_scheme = HTTPBearer(auto_error=False)
-
-
-def require_auth_token(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(auth_scheme)],
-) -> str:
-    """Temporary auth guard requiring a Bearer token."""
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return credentials.credentials
-
-
-def _resolve_user_id_from_token(token: str) -> UUID:
-    """Temporary user resolution until full JWT dependency is wired."""
-    try:
-        return UUID(token.strip())
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token format",
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
-
 
 @router.post("/generate", status_code=status.HTTP_202_ACCEPTED)
 async def generate_report(
     payload: ReportRequest,
-    token: Annotated[str, Depends(require_auth_token)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, str]:
     """Dispatch a background report generation task for the given project/session."""
-    user_id = _resolve_user_id_from_token(token)
-
     task = celery_app.send_task(
         "generate_report_task",
-        args=[payload.project_id, payload.session_id, str(user_id)],
+        args=[payload.project_id, payload.session_id, str(current_user.id)],
     )
     if task is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to dispatch report task")
@@ -66,7 +38,7 @@ async def generate_report(
 @router.get("/status/{job_id}")
 async def get_report_status(
     job_id: str,
-    _: Annotated[str, Depends(require_auth_token)],
+    _: Annotated[User, Depends(get_current_user)],
 ) -> ReportStatusRead:
     """Return report generation status and download URL when available."""
     task_result = AsyncResult(job_id, app=celery_app)
@@ -93,7 +65,7 @@ async def get_report_status(
 @router.get("/download/{job_id}")
 async def download_report(
     job_id: str,
-    _: Annotated[str, Depends(require_auth_token)],
+    _: Annotated[User, Depends(get_current_user)],
 ) -> StreamingResponse:
     """Stream the generated PDF report for a completed job."""
     task_result = AsyncResult(job_id, app=celery_app)

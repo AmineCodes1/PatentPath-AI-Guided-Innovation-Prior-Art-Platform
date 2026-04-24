@@ -6,7 +6,7 @@ import json
 import re
 from uuid import UUID
 
-import anthropic
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,7 +19,6 @@ from app.models.search_session import SearchSession
 from app.schemas.gap_analysis import GapAnalysisCreate
 
 settings = get_settings()
-MODEL_NAME = "claude-sonnet-4-20250514"
 
 
 def build_gap_analysis_prompt(query_text: str, top_patents: list[PatentRecord]) -> tuple[str, str]:
@@ -126,15 +125,17 @@ async def run_gap_analysis(db: AsyncSession, session_id: str) -> GapAnalysis:
     patents = [row.patent for row in scored_rows if row.patent is not None]
     system_prompt, user_prompt = build_gap_analysis_prompt(session.query_text, patents)
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    message = await client.messages.create(
-        model=MODEL_NAME,
+    client = AsyncOpenAI(base_url=f"{settings.ollama_base_url}/v1", api_key="ollama")
+    response = await client.chat.completions.create(
+        model=settings.ollama_model,
         max_tokens=2000,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
     )
 
-    raw_text = _extract_text_content(message)
+    raw_text = (response.choices[0].message.content or "").strip()
 
     try:
         parsed_json = _extract_json_payload(raw_text)
@@ -147,7 +148,7 @@ async def run_gap_analysis(db: AsyncSession, session_id: str) -> GapAnalysis:
             gap_aspects=validated.gap_aspects,
             suggestions=validated.suggestions,
             narrative_text=validated.narrative_text,
-            model_used=validated.model_used or MODEL_NAME,
+            model_used=validated.model_used or settings.ollama_model,
             feasibility_technical=validated.feasibility_technical,
             feasibility_domain=validated.feasibility_domain,
             feasibility_claim=validated.feasibility_claim,
@@ -162,7 +163,7 @@ async def run_gap_analysis(db: AsyncSession, session_id: str) -> GapAnalysis:
             gap_aspects=[],
             suggestions=[],
             narrative_text=raw_text,
-            model_used=f"{MODEL_NAME};parse_error=true",
+            model_used=f"{settings.ollama_model};parse_error=true",
             feasibility_technical=None,
             feasibility_domain=None,
             feasibility_claim=None,

@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     redis_url: str
     epo_consumer_key: str = ""
     epo_consumer_secret: str = ""
-    anthropic_api_key: str = ""
+    ollama_base_url: str = "http://host.docker.internal:11434"
+    ollama_model: str = "qwen2.5:14b"
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440

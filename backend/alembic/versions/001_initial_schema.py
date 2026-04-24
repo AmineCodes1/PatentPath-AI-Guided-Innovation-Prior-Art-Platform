@@ -18,10 +18,10 @@ branch_labels = None
 depends_on = None
 
 
-project_status_enum = sa.Enum("ACTIVE", "ARCHIVED", "REPORT_READY", name="project_status")
-search_session_status_enum = sa.Enum("PENDING", "PROCESSING", "COMPLETE", "FAILED", name="search_session_status")
-risk_label_enum = sa.Enum("HIGH", "MEDIUM", "LOW", "MINIMAL", name="risk_label")
-overall_risk_enum = sa.Enum("HIGH", "MEDIUM", "LOW", name="overall_risk")
+project_status_enum = sa.Enum("ACTIVE", "ARCHIVED", "REPORT_READY", name="project_status", create_type=False)
+search_session_status_enum = sa.Enum("PENDING", "PROCESSING", "COMPLETE", "FAILED", name="search_session_status", create_type=False)
+risk_label_enum = sa.Enum("HIGH", "MEDIUM", "LOW", "MINIMAL", name="risk_label", create_type=False)
+overall_risk_enum = sa.Enum("HIGH", "MEDIUM", "LOW", name="overall_risk", create_type=False)
 NOW_EXPR = sa.text("now()")
 JSONB_EMPTY_OBJECT_EXPR = sa.text("'{}'::jsonb")
 JSONB_EMPTY_ARRAY_EXPR = sa.text("'[]'::jsonb")
