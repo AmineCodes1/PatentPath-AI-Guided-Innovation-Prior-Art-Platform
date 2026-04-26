@@ -77,6 +77,8 @@ PatentPath was developed for:
 
 - Team member 1: ABDELMOUMEN Mohamed Amine
 - Team member 2: BAHI Mehdi
+- Team member 3: AFTYSS Ilyass
+- Team member 4: DANI Adil
 
 
 ## Legal and Disclaimer
